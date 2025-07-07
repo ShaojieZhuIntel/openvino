@@ -227,6 +227,14 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<con
 
     _logger.debug("compileIR Build flags : %s", buildFlags.c_str());
 
+    _logger.info("compileIR Build flags : %s", buildFlags.c_str());
+    const bool enablePreprocess = config.get<ENABLE_VCL_PREPROCESS>();
+    if (enablePreprocess) {
+        _logger.info("VCL preprocessing is enabled.");
+    } else {
+        _logger.info("VCL preprocessing is disabled.");
+    }
+
     // If UMD Caching is requested to be bypassed or if OV cache is enabled, disable driver caching
     uint32_t flags = ZE_GRAPH_FLAG_NONE;
     const auto set_cache_dir = config.get<CACHE_DIR>();
