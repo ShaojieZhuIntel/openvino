@@ -1375,4 +1375,29 @@ struct MODEL_PTR final : OptionBase<MODEL_PTR, std::shared_ptr<const ov::Model>>
     }
 };
 
+//
+// ENABLE_VCL_PREPROCESS
+//
+struct ENABLE_VCL_PREPROCESS final : OptionBase<ENABLE_VCL_PREPROCESS, bool> {
+    static std::string_view key() {
+        return ov::intel_npu::enable_vcl_preprocess.name();
+    }
+
+    static bool defaultValue() {
+        return false;
+    }
+
+    static bool isPublic() {
+        return true;
+    }
+
+    static ov::PropertyMutability mutability() {
+        return ov::PropertyMutability::RW;
+    }
+
+    static OptionMode mode() {
+        return OptionMode::Both;
+    }
+};
+
 }  // namespace intel_npu

@@ -136,5 +136,13 @@ static constexpr ov::Property<bool> defer_weights_load{"NPU_DEFER_WEIGHTS_LOAD"}
  */
 static constexpr ov::Property<bool> run_inferences_sequentially{"NPU_RUN_INFERENCES_SEQUENTIALLY"};
 
+/**
+ * @brief [Only for NPU Plugin]
+ * Type: boolean, default is false
+ * This option allows enabling or disabling VCL preprocessing.
+ * @ingroup ov_runtime_npu_prop_cpp_api
+ */
+static constexpr ov::Property<bool> enable_vcl_preprocess{"NPU_ENABLE_VCL_PREPROCESS"};
+
 }  // namespace intel_npu
 }  // namespace ov
