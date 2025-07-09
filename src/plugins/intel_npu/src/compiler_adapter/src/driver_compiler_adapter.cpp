@@ -562,10 +562,8 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
                     break;
                 default:
                     defaulLayout = rankToLegacyLayoutString(rank);
-                    _logger.info("Using rankToLegacyLayoutString for rank");
                     break;
                 }
-                _logger.info("rank: {0}, defaulLayout: {1}", rank, defaulLayout);
                 if (defaulLayout != "") {
                     layout = ov::Layout(defaulLayout);
                 }
@@ -629,10 +627,8 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
                 break;
             default:
                 defaulLayout = rankToLegacyLayoutString(rank);
-                _logger.info("Using rankToLegacyLayoutString for rank");
                 break;
             }
-            _logger.info("rank: {0}, defaulLayout: {1}", rank, defaulLayout);
             if (defaulLayout != "") {
                 layout = ov::Layout(defaulLayout);
             }
