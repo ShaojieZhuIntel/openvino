@@ -1388,7 +1388,7 @@ struct ENABLE_VCL_PREPROCESS final : OptionBase<ENABLE_VCL_PREPROCESS, bool> {
     }
 
     static bool isPublic() {
-        return true;
+        return false;
     }
 
     static ov::PropertyMutability mutability() {
