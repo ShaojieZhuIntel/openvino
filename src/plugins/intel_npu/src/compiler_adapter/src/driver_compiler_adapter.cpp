@@ -184,6 +184,14 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<con
 
     _logger.debug("compileIR Build flags : %s", buildFlags.c_str());
 
+    _logger.info("compileIR Build flags : %s", buildFlags.c_str());
+    const bool enablePreprocess = config.get<ENABLE_VCL_PREPROCESS>();
+    if (enablePreprocess) {
+        _logger.info("VCL preprocessing is enabled.");
+    } else {
+        _logger.info("VCL preprocessing is disabled.");
+    }
+
     // If UMD Caching is requested to be bypassed or if OV cache is enabled, disable driver caching
     uint32_t flags = ZE_GRAPH_FLAG_NONE;
     const auto set_cache_dir = config.get<CACHE_DIR>();
@@ -351,6 +359,39 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
         for (const std::shared_ptr<ov::op::v0::Parameter>& parameter : parameters) {
             const auto precision = parameter->get_element_type();
             const auto rank = getRankOrThrow(parameter->get_partial_shape());
+            ov::Layout modelLayout = parameter->get_layout();
+            std::string layout = modelLayout.to_string();
+            layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
+            if (modelLayout.empty()) {
+                std::string defaulLayout = "";
+                switch (rank) {
+                case 3:
+                    defaulLayout = (parameter->get_partial_shape()[2].get_max_length() <= 4 &&
+                                    parameter->get_partial_shape()[0].get_max_length() > 4)
+                                       ? "HWC"
+                                       : "CHW";
+                    break;
+                case 4:
+                    // Rough check for layout type, basing on max number of image channels
+                    defaulLayout = (parameter->get_partial_shape()[3].get_max_length() <= 4 &&
+                                    parameter->get_partial_shape()[1].get_max_length() > 4)
+                                       ? "NHWC"
+                                       : "NCHW";
+                    break;
+                case 5:
+                    defaulLayout = (parameter->get_partial_shape()[4].get_max_length() <= 4 &&
+                                    parameter->get_partial_shape()[1].get_max_length() > 4)
+                                       ? "NDHWC"
+                                       : "NCDHW";
+                    break;
+                default:
+                    defaulLayout = rankToLegacyLayoutString(rank);
+                    break;
+                }
+                if (defaulLayout != "") {
+                    layout = defaulLayout;
+                }
+            }
 
             if (parameterIndex != 0) {
                 inputsPrecisionSS << VALUES_SEPARATOR;
@@ -369,7 +410,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
             }
 
             inputsPrecisionSS << NAME_VALUE_SEPARATOR << ovPrecisionToLegacyPrecisionString(precision);
-            inputsLayoutSS << NAME_VALUE_SEPARATOR << rankToLegacyLayoutString(rank);
+            inputsLayoutSS << NAME_VALUE_SEPARATOR << layout;
 
             ++parameterIndex;
         }
@@ -385,6 +426,39 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
     for (const std::shared_ptr<ov::op::v0::Result>& result : results) {
         const auto precision = result->get_element_type();
         const auto rank = getRankOrThrow(result->get_output_partial_shape(0));
+        ov::Layout modelLayout = result->get_layout();
+        std::string layout = modelLayout.to_string();
+        layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
+        if (modelLayout.empty()) {
+            std::string defaulLayout = "";
+            switch (rank) {
+            case 3:
+                defaulLayout = (result->get_output_partial_shape(0)[2].get_max_length() <= 4 &&
+                                result->get_output_partial_shape(0)[0].get_max_length() > 4)
+                                   ? "HWC"
+                                   : "CHW";
+                break;
+            case 4:
+                // Rough check for layout type, basing on max number of image channels
+                defaulLayout = (result->get_output_partial_shape(0)[3].get_max_length() <= 4 &&
+                                result->get_output_partial_shape(0)[1].get_max_length() > 4)
+                                   ? "NHWC"
+                                   : "NCHW";
+                break;
+            case 5:
+                defaulLayout = (result->get_output_partial_shape(0)[4].get_max_length() <= 4 &&
+                                result->get_output_partial_shape(0)[1].get_max_length() > 4)
+                                   ? "NDHWC"
+                                   : "NCDHW";
+                break;
+            default:
+                defaulLayout = rankToLegacyLayoutString(rank);
+                break;
+            }
+            if (defaulLayout != "") {
+                layout = defaulLayout;
+            }
+        }
 
         if (resultIndex != 0) {
             outputsPrecisionSS << VALUES_SEPARATOR;
@@ -402,7 +476,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
         }
 
         outputsPrecisionSS << NAME_VALUE_SEPARATOR << ovPrecisionToLegacyPrecisionString(precision);
-        outputsLayoutSS << NAME_VALUE_SEPARATOR << rankToLegacyLayoutString(rank);
+        outputsLayoutSS << NAME_VALUE_SEPARATOR << layout;
 
         ++resultIndex;
     }
@@ -431,6 +505,17 @@ std::string DriverCompilerAdapter::serializeConfig(const Config& config,
     }
 
     logger.debug("Original content of config: %s", content.c_str());
+
+    if ((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 4)) {
+        if (std::regex_search(content, std::regex("NPU_ENABLE_VCL_PREPROCESS"))) {
+            std::ostringstream preprocessStr;
+            preprocessStr << ov::intel_npu::enable_vcl_preprocess.name() << KEY_VALUE_SEPARATOR << VALUE_DELIMITER
+                          << "\\S+" << VALUE_DELIMITER;
+            logger.info("NPU_ENABLE_VCL_PREPROCESS property is not supported by this compiler version. Removing from "
+                        "parameters");
+            content = std::regex_replace(content, std::regex(preprocessStr.str()), "");
+        }
+    }
 
     // Remove optimization-level and performance-hint-override for old driver which not support them
     if ((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 7)) {
