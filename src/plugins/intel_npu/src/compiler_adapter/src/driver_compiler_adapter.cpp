@@ -359,7 +359,8 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
         for (const std::shared_ptr<ov::op::v0::Parameter>& parameter : parameters) {
             const auto precision = parameter->get_element_type();
             const auto rank = getRankOrThrow(parameter->get_partial_shape());
-            ov::Layout layout = parameter->get_layout();
+            std::string layout = (parameter->get_layout()).to_string();
+            layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
             if (layout.empty()) {
                 std::string defaulLayout = "";
                 switch (rank) {
@@ -387,7 +388,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
                     break;
                 }
                 if (defaulLayout != "") {
-                    layout = ov::Layout(defaulLayout);
+                    layout = defaulLayout;
                 }
             }
 
@@ -408,7 +409,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
             }
 
             inputsPrecisionSS << NAME_VALUE_SEPARATOR << ovPrecisionToLegacyPrecisionString(precision);
-            inputsLayoutSS << NAME_VALUE_SEPARATOR << layout.to_string();
+            inputsLayoutSS << NAME_VALUE_SEPARATOR << layout;
 
             ++parameterIndex;
         }
@@ -424,7 +425,8 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
     for (const std::shared_ptr<ov::op::v0::Result>& result : results) {
         const auto precision = result->get_element_type();
         const auto rank = getRankOrThrow(result->get_output_partial_shape(0));
-        ov::Layout layout = result->get_layout();
+        std::string layout = (result->get_layout()).to_string();
+        layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
         if (layout.empty()) {
             std::string defaulLayout = "";
             switch (rank) {
@@ -452,7 +454,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
                 break;
             }
             if (defaulLayout != "") {
-                layout = ov::Layout(defaulLayout);
+                layout = defaulLayout;
             }
         }
 
@@ -472,7 +474,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
         }
 
         outputsPrecisionSS << NAME_VALUE_SEPARATOR << ovPrecisionToLegacyPrecisionString(precision);
-        outputsLayoutSS << NAME_VALUE_SEPARATOR << layout.to_string();
+        outputsLayoutSS << NAME_VALUE_SEPARATOR << layout;
 
         ++resultIndex;
     }
