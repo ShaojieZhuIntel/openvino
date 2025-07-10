@@ -537,9 +537,10 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
         for (const std::shared_ptr<ov::op::v0::Parameter>& parameter : parameters) {
             const auto precision = parameter->get_element_type();
             const auto rank = getRankOrThrow(parameter->get_partial_shape());
-            std::string layout = (parameter->get_layout()).to_string();
+            ov::Layout modelLayout = parameter->get_layout();
+            std::string layout = modelLayout.to_string();
             layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
-            if (layout.empty()) {
+            if (modelLayout.empty()) {
                 std::string defaulLayout = "";
                 switch (rank) {
                 case 3:
@@ -603,9 +604,10 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
     for (const std::shared_ptr<ov::op::v0::Result>& result : results) {
         const auto precision = result->get_element_type();
         const auto rank = getRankOrThrow(result->get_output_partial_shape(0));
-        std::string layout = (result->get_layout()).to_string();
+        ov::Layout modelLayout = result->get_layout();
+        std::string layout = modelLayout.to_string();
         layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
-        if (layout.empty()) {
+        if (modelLayout.empty()) {
             std::string defaulLayout = "";
             switch (rank) {
             case 3:
