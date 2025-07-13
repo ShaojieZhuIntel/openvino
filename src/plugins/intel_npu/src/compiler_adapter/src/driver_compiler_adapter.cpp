@@ -29,6 +29,7 @@ constexpr std::string_view INPUTS_PRECISIONS_KEY = "--inputs_precisions";
 constexpr std::string_view INPUTS_LAYOUTS_KEY = "--inputs_layouts";
 constexpr std::string_view OUTPUTS_PRECISIONS_KEY = "--outputs_precisions";
 constexpr std::string_view OUTPUTS_LAYOUTS_KEY = "--outputs_layouts";
+constexpr std::string_view VCL_PREPOSTPROCESS_KEY = "--vcl_prepostprocess";
 
 // <option key>="<option value>"
 constexpr std::string_view KEY_VALUE_SEPARATOR = "=";
@@ -228,12 +229,6 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<con
     _logger.debug("compileIR Build flags : %s", buildFlags.c_str());
 
     _logger.info("compileIR Build flags : %s", buildFlags.c_str());
-    const bool enablePreprocess = config.get<ENABLE_VCL_PREPROCESS>();
-    if (enablePreprocess) {
-        _logger.info("VCL preprocessing is enabled.");
-    } else {
-        _logger.info("VCL preprocessing is disabled.");
-    }
 
     // If UMD Caching is requested to be bypassed or if OV cache is enabled, disable driver caching
     uint32_t flags = ZE_GRAPH_FLAG_NONE;
@@ -521,9 +516,14 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
     std::stringstream inputsLayoutSS;
     std::stringstream outputsPrecisionSS;
     std::stringstream outputsLayoutSS;
+    std::stringstream prePostProcessSS;
 
     inputsPrecisionSS << INPUTS_PRECISIONS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
     inputsLayoutSS << INPUTS_LAYOUTS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
+
+    prePostProcessSS << VCL_PREPOSTPROCESS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
+    prePostProcessSS << "false" << VALUE_DELIMITER;
+
     const auto getRankOrThrow = [](const ov::PartialShape& shape) -> size_t {
         if (shape.rank().is_dynamic()) {
             OPENVINO_THROW("Dynamic rank is not supported for NPU plugin");
@@ -664,7 +664,8 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
 
     // One line without spaces to avoid parsing as config option inside CID
     return inputsPrecisionSS.str() + VALUES_SEPARATOR.data() + inputsLayoutSS.str() + VALUES_SEPARATOR.data() +
-           outputsPrecisionSS.str() + VALUES_SEPARATOR.data() + outputsLayoutSS.str();
+           outputsPrecisionSS.str() + VALUES_SEPARATOR.data() + outputsLayoutSS.str() + VALUES_SEPARATOR.data() +
+           prePostProcessSS.str();
 }
 
 std::string DriverCompilerAdapter::serializeConfig(const Config& config,
@@ -683,17 +684,6 @@ std::string DriverCompilerAdapter::serializeConfig(const Config& config,
     }
 
     logger.debug("Original content of config: %s", content.c_str());
-
-    if ((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 4)) {
-        if (std::regex_search(content, std::regex("NPU_ENABLE_VCL_PREPROCESS"))) {
-            std::ostringstream preprocessStr;
-            preprocessStr << ov::intel_npu::enable_vcl_preprocess.name() << KEY_VALUE_SEPARATOR << VALUE_DELIMITER
-                          << "\\S+" << VALUE_DELIMITER;
-            logger.info("NPU_ENABLE_VCL_PREPROCESS property is not supported by this compiler version. Removing from "
-                        "parameters");
-            content = std::regex_replace(content, std::regex(preprocessStr.str()), "");
-        }
-    }
 
     // Remove optimization-level and performance-hint-override for old driver which not support them
     if ((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 7)) {
