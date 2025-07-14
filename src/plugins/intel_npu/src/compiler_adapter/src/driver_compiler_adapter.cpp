@@ -516,7 +516,6 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
 
     inputsPrecisionSS << INPUTS_PRECISIONS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
     inputsLayoutSS << INPUTS_LAYOUTS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
-
     const auto getRankOrThrow = [](const ov::PartialShape& shape) -> size_t {
         if (shape.rank().is_dynamic()) {
             OPENVINO_THROW("Dynamic rank is not supported for NPU plugin");
