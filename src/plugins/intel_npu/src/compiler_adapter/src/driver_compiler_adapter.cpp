@@ -29,7 +29,6 @@ constexpr std::string_view INPUTS_PRECISIONS_KEY = "--inputs_precisions";
 constexpr std::string_view INPUTS_LAYOUTS_KEY = "--inputs_layouts";
 constexpr std::string_view OUTPUTS_PRECISIONS_KEY = "--outputs_precisions";
 constexpr std::string_view OUTPUTS_LAYOUTS_KEY = "--outputs_layouts";
-constexpr std::string_view VCL_PREPOSTPROCESS_KEY = "--vcl_prepostprocess";
 
 // <option key>="<option value>"
 constexpr std::string_view KEY_VALUE_SEPARATOR = "=";
@@ -227,8 +226,6 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<con
     buildFlags += serializeConfig(config, compilerVersion);
 
     _logger.debug("compileIR Build flags : %s", buildFlags.c_str());
-
-    _logger.info("compileIR Build flags : %s", buildFlags.c_str());
 
     // If UMD Caching is requested to be bypassed or if OV cache is enabled, disable driver caching
     uint32_t flags = ZE_GRAPH_FLAG_NONE;
@@ -516,13 +513,9 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
     std::stringstream inputsLayoutSS;
     std::stringstream outputsPrecisionSS;
     std::stringstream outputsLayoutSS;
-    std::stringstream prePostProcessSS;
 
     inputsPrecisionSS << INPUTS_PRECISIONS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
     inputsLayoutSS << INPUTS_LAYOUTS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
-
-    prePostProcessSS << VCL_PREPOSTPROCESS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
-    prePostProcessSS << "false" << VALUE_DELIMITER;
 
     const auto getRankOrThrow = [](const ov::PartialShape& shape) -> size_t {
         if (shape.rank().is_dynamic()) {
@@ -664,8 +657,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
 
     // One line without spaces to avoid parsing as config option inside CID
     return inputsPrecisionSS.str() + VALUES_SEPARATOR.data() + inputsLayoutSS.str() + VALUES_SEPARATOR.data() +
-           outputsPrecisionSS.str() + VALUES_SEPARATOR.data() + outputsLayoutSS.str() + VALUES_SEPARATOR.data() +
-           prePostProcessSS.str();
+           outputsPrecisionSS.str() + VALUES_SEPARATOR.data() + outputsLayoutSS.str();
 }
 
 std::string DriverCompilerAdapter::serializeConfig(const Config& config,
