@@ -533,33 +533,33 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
             std::string layout = modelLayout.to_string();
             layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
             if (modelLayout.empty()) {
-                std::string defaulLayout = "";
+                std::string defautlLayout = "";
                 switch (rank) {
                 case 3:
-                    defaulLayout = (parameter->get_partial_shape()[2].get_max_length() <= 4 &&
+                    defautlLayout = (parameter->get_partial_shape()[2].get_max_length() <= 4 &&
                                     parameter->get_partial_shape()[0].get_max_length() > 4)
                                        ? "HWC"
                                        : "CHW";
                     break;
                 case 4:
                     // Rough check for layout type, basing on max number of image channels
-                    defaulLayout = (parameter->get_partial_shape()[3].get_max_length() <= 4 &&
+                    defautlLayout = (parameter->get_partial_shape()[3].get_max_length() <= 4 &&
                                     parameter->get_partial_shape()[1].get_max_length() > 4)
                                        ? "NHWC"
                                        : "NCHW";
                     break;
                 case 5:
-                    defaulLayout = (parameter->get_partial_shape()[4].get_max_length() <= 4 &&
+                    defautlLayout = (parameter->get_partial_shape()[4].get_max_length() <= 4 &&
                                     parameter->get_partial_shape()[1].get_max_length() > 4)
                                        ? "NDHWC"
                                        : "NCDHW";
                     break;
                 default:
-                    defaulLayout = rankToLegacyLayoutString(rank);
+                    defautlLayout = rankToLegacyLayoutString(rank);
                     break;
                 }
-                if (defaulLayout != "") {
-                    layout = defaulLayout;
+                if (defautlLayout != "") {
+                    layout = defautlLayout;
                 }
             }
 
@@ -600,33 +600,33 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
         std::string layout = modelLayout.to_string();
         layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
         if (modelLayout.empty()) {
-            std::string defaulLayout = "";
+            std::string defautlLayout = "";
             switch (rank) {
             case 3:
-                defaulLayout = (result->get_output_partial_shape(0)[2].get_max_length() <= 4 &&
+                defautlLayout = (result->get_output_partial_shape(0)[2].get_max_length() <= 4 &&
                                 result->get_output_partial_shape(0)[0].get_max_length() > 4)
                                    ? "HWC"
                                    : "CHW";
                 break;
             case 4:
                 // Rough check for layout type, basing on max number of image channels
-                defaulLayout = (result->get_output_partial_shape(0)[3].get_max_length() <= 4 &&
+                defautlLayout = (result->get_output_partial_shape(0)[3].get_max_length() <= 4 &&
                                 result->get_output_partial_shape(0)[1].get_max_length() > 4)
                                    ? "NHWC"
                                    : "NCHW";
                 break;
             case 5:
-                defaulLayout = (result->get_output_partial_shape(0)[4].get_max_length() <= 4 &&
+                defautlLayout = (result->get_output_partial_shape(0)[4].get_max_length() <= 4 &&
                                 result->get_output_partial_shape(0)[1].get_max_length() > 4)
                                    ? "NDHWC"
                                    : "NCDHW";
                 break;
             default:
-                defaulLayout = rankToLegacyLayoutString(rank);
+                defautlLayout = rankToLegacyLayoutString(rank);
                 break;
             }
-            if (defaulLayout != "") {
-                layout = defaulLayout;
+            if (defautlLayout != "") {
+                layout = defautlLayout;
             }
         }
 
