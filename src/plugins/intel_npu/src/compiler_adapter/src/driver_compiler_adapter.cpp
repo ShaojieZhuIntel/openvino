@@ -27,8 +27,10 @@ namespace {
 
 constexpr std::string_view INPUTS_PRECISIONS_KEY = "--inputs_precisions";
 constexpr std::string_view INPUTS_LAYOUTS_KEY = "--inputs_layouts";
+constexpr std::string_view INPUTS_MODEL_LAYOUTS_KEY = "--inputs_model_layouts";
 constexpr std::string_view OUTPUTS_PRECISIONS_KEY = "--outputs_precisions";
 constexpr std::string_view OUTPUTS_LAYOUTS_KEY = "--outputs_layouts";
+constexpr std::string_view OUTPUTS_MODEL_LAYOUTS_KEY = "--outputs_model_layouts";
 
 // <option key>="<option value>"
 constexpr std::string_view KEY_VALUE_SEPARATOR = "=";
@@ -219,9 +221,11 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<con
 
     std::string buildFlags;
     const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
+    const bool useModelLayout =
+        !((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 4));
 
     _logger.debug("build flags");
-    buildFlags += serializeIOInfo(model, useIndices);
+    buildFlags += serializeIOInfo(model, useIndices, useModelLayout);
     buildFlags += " ";
     buildFlags += serializeConfig(config, compilerVersion);
 
@@ -505,17 +509,21 @@ SerializedIR DriverCompilerAdapter::serializeIR(const std::shared_ptr<const ov::
 }
 
 std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const ov::Model>& model,
-                                                   const bool useIndices) const {
+                                                   const bool useIndices,
+                                                   const bool useModelLayout) const {
     const ov::ParameterVector& parameters = model->get_parameters();
     const ov::ResultVector& results = model->get_results();
 
     std::stringstream inputsPrecisionSS;
     std::stringstream inputsLayoutSS;
+    std::stringstream inputsModelLayoutSS;
     std::stringstream outputsPrecisionSS;
     std::stringstream outputsLayoutSS;
+    std::stringstream outputsModelLayoutSS;
 
     inputsPrecisionSS << INPUTS_PRECISIONS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
     inputsLayoutSS << INPUTS_LAYOUTS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
+    inputsModelLayoutSS << INPUTS_MODEL_LAYOUTS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
     const auto getRankOrThrow = [](const ov::PartialShape& shape) -> size_t {
         if (shape.rank().is_dynamic()) {
             OPENVINO_THROW("Dynamic rank is not supported for NPU plugin");
@@ -530,57 +538,34 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
             const auto precision = parameter->get_element_type();
             const auto rank = getRankOrThrow(parameter->get_partial_shape());
             ov::Layout modelLayout = parameter->get_layout();
-            std::string layout = modelLayout.to_string();
-            layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
+            std::string inputModelLayout = std::regex_replace(modelLayout.to_string(), std::regex(R"([\[\],])"), "");
+            std::string inputLayout = inputModelLayout;
             if (modelLayout.empty()) {
-                std::string defautlLayout = "";
-                switch (rank) {
-                case 3:
-                    defautlLayout = (parameter->get_partial_shape()[2].get_max_length() <= 4 &&
-                                    parameter->get_partial_shape()[0].get_max_length() > 4)
-                                       ? "HWC"
-                                       : "CHW";
-                    break;
-                case 4:
-                    // Rough check for layout type, basing on max number of image channels
-                    defautlLayout = (parameter->get_partial_shape()[3].get_max_length() <= 4 &&
-                                    parameter->get_partial_shape()[1].get_max_length() > 4)
-                                       ? "NHWC"
-                                       : "NCHW";
-                    break;
-                case 5:
-                    defautlLayout = (parameter->get_partial_shape()[4].get_max_length() <= 4 &&
-                                    parameter->get_partial_shape()[1].get_max_length() > 4)
-                                       ? "NDHWC"
-                                       : "NCDHW";
-                    break;
-                default:
-                    defautlLayout = rankToLegacyLayoutString(rank);
-                    break;
-                }
-                if (defautlLayout != "") {
-                    layout = defautlLayout;
-                }
+                inputLayout = rankToLegacyLayoutString(rank);
             }
 
             if (parameterIndex != 0) {
                 inputsPrecisionSS << VALUES_SEPARATOR;
                 inputsLayoutSS << VALUES_SEPARATOR;
+                inputsModelLayoutSS << VALUES_SEPARATOR;
             }
 
             if (useIndices) {
                 inputsPrecisionSS << parameterIndex;
                 inputsLayoutSS << parameterIndex;
+                inputsModelLayoutSS << parameterIndex;
             } else {
                 const std::string& name = parameter->get_friendly_name();
 
                 inputsPrecisionSS << name;
                 // Ticket: E-88902
                 inputsLayoutSS << name;
+                inputsModelLayoutSS << name;
             }
 
             inputsPrecisionSS << NAME_VALUE_SEPARATOR << ovPrecisionToLegacyPrecisionString(precision);
-            inputsLayoutSS << NAME_VALUE_SEPARATOR << layout;
+            inputsLayoutSS << NAME_VALUE_SEPARATOR << inputLayout;
+            inputsModelLayoutSS << NAME_VALUE_SEPARATOR << inputModelLayout;
 
             ++parameterIndex;
         }
@@ -588,75 +573,61 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
 
     inputsPrecisionSS << VALUE_DELIMITER;
     inputsLayoutSS << VALUE_DELIMITER;
+    inputsModelLayoutSS << VALUE_DELIMITER;
 
     outputsPrecisionSS << OUTPUTS_PRECISIONS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
     outputsLayoutSS << OUTPUTS_LAYOUTS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
+    outputsModelLayoutSS << OUTPUTS_MODEL_LAYOUTS_KEY << KEY_VALUE_SEPARATOR << VALUE_DELIMITER;
 
     size_t resultIndex = 0;
     for (const std::shared_ptr<ov::op::v0::Result>& result : results) {
         const auto precision = result->get_element_type();
         const auto rank = getRankOrThrow(result->get_output_partial_shape(0));
         ov::Layout modelLayout = result->get_layout();
-        std::string layout = modelLayout.to_string();
-        layout = std::regex_replace(layout, std::regex(R"([\[\],])"), "");
+        std::string outputModelLayout = std::regex_replace(modelLayout.to_string(), std::regex(R"([\[\],])"), "");
+        std::string outputLayout = outputModelLayout;
         if (modelLayout.empty()) {
-            std::string defautlLayout = "";
-            switch (rank) {
-            case 3:
-                defautlLayout = (result->get_output_partial_shape(0)[2].get_max_length() <= 4 &&
-                                result->get_output_partial_shape(0)[0].get_max_length() > 4)
-                                   ? "HWC"
-                                   : "CHW";
-                break;
-            case 4:
-                // Rough check for layout type, basing on max number of image channels
-                defautlLayout = (result->get_output_partial_shape(0)[3].get_max_length() <= 4 &&
-                                result->get_output_partial_shape(0)[1].get_max_length() > 4)
-                                   ? "NHWC"
-                                   : "NCHW";
-                break;
-            case 5:
-                defautlLayout = (result->get_output_partial_shape(0)[4].get_max_length() <= 4 &&
-                                result->get_output_partial_shape(0)[1].get_max_length() > 4)
-                                   ? "NDHWC"
-                                   : "NCDHW";
-                break;
-            default:
-                defautlLayout = rankToLegacyLayoutString(rank);
-                break;
-            }
-            if (defautlLayout != "") {
-                layout = defautlLayout;
-            }
+            outputLayout = rankToLegacyLayoutString(rank);
         }
 
         if (resultIndex != 0) {
             outputsPrecisionSS << VALUES_SEPARATOR;
             outputsLayoutSS << VALUES_SEPARATOR;
+            outputsModelLayoutSS << VALUES_SEPARATOR;
         }
 
         if (useIndices) {
             outputsPrecisionSS << resultIndex;
             outputsLayoutSS << resultIndex;
+            outputsModelLayoutSS << resultIndex;
         } else {
             const std::string& name = result->get_input_node_ptr(0)->get_friendly_name();
 
             outputsPrecisionSS << name;
             outputsLayoutSS << name;
+            outputsModelLayoutSS << name;
         }
 
         outputsPrecisionSS << NAME_VALUE_SEPARATOR << ovPrecisionToLegacyPrecisionString(precision);
-        outputsLayoutSS << NAME_VALUE_SEPARATOR << layout;
+        outputsLayoutSS << NAME_VALUE_SEPARATOR << outputLayout;
+        outputsModelLayoutSS << NAME_VALUE_SEPARATOR << outputModelLayout;
 
         ++resultIndex;
     }
 
     outputsPrecisionSS << VALUE_DELIMITER;
     outputsLayoutSS << VALUE_DELIMITER;
+    outputsModelLayoutSS << VALUE_DELIMITER;
 
     // One line without spaces to avoid parsing as config option inside CID
-    return inputsPrecisionSS.str() + VALUES_SEPARATOR.data() + inputsLayoutSS.str() + VALUES_SEPARATOR.data() +
-           outputsPrecisionSS.str() + VALUES_SEPARATOR.data() + outputsLayoutSS.str();
+    if (useModelLayout) {
+        return inputsPrecisionSS.str() + VALUES_SEPARATOR.data() + inputsLayoutSS.str() + VALUES_SEPARATOR.data() +
+               outputsPrecisionSS.str() + VALUES_SEPARATOR.data() + outputsLayoutSS.str();
+    } else {
+        return inputsPrecisionSS.str() + VALUES_SEPARATOR.data() + inputsLayoutSS.str() + VALUES_SEPARATOR.data() +
+               inputsModelLayoutSS.str() + VALUES_SEPARATOR.data() + outputsPrecisionSS.str() +
+               VALUES_SEPARATOR.data() + outputsLayoutSS.str() + VALUES_SEPARATOR.data() + outputsModelLayoutSS.str();
+    }
 }
 
 std::string DriverCompilerAdapter::serializeConfig(const Config& config,

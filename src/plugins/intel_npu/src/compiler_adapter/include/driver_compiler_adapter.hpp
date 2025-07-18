@@ -55,7 +55,9 @@ private:
      * API, the layout fields shall be filled with default values in order to assure the backward compatibility
      * with the driver.
      */
-    std::string serializeIOInfo(const std::shared_ptr<const ov::Model>& model, const bool useIndices) const;
+    std::string serializeIOInfo(const std::shared_ptr<const ov::Model>& model,
+                                const bool useIndices,
+                                const bool useModelLayout) const;
 
     SerializedIR serializeIR(const std::shared_ptr<const ov::Model>& model,
                              ze_graph_compiler_version_info_t compilerVersion,
