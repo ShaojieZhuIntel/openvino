@@ -620,14 +620,13 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
     outputsModelLayoutSS << VALUE_DELIMITER;
 
     // One line without spaces to avoid parsing as config option inside CID
-    if (useModelLayout) {
+    if (!useModelLayout) {
         return inputsPrecisionSS.str() + VALUES_SEPARATOR.data() + inputsLayoutSS.str() + VALUES_SEPARATOR.data() +
                outputsPrecisionSS.str() + VALUES_SEPARATOR.data() + outputsLayoutSS.str();
-    } else {
-        return inputsPrecisionSS.str() + VALUES_SEPARATOR.data() + inputsLayoutSS.str() + VALUES_SEPARATOR.data() +
-               inputsModelLayoutSS.str() + VALUES_SEPARATOR.data() + outputsPrecisionSS.str() +
-               VALUES_SEPARATOR.data() + outputsLayoutSS.str() + VALUES_SEPARATOR.data() + outputsModelLayoutSS.str();
     }
+    return inputsPrecisionSS.str() + VALUES_SEPARATOR.data() + inputsLayoutSS.str() + VALUES_SEPARATOR.data() +
+           inputsModelLayoutSS.str() + VALUES_SEPARATOR.data() + outputsPrecisionSS.str() + VALUES_SEPARATOR.data() +
+           outputsLayoutSS.str() + VALUES_SEPARATOR.data() + outputsModelLayoutSS.str();
 }
 
 std::string DriverCompilerAdapter::serializeConfig(const Config& config,
