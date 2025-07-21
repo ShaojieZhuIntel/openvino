@@ -538,8 +538,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
             const auto precision = parameter->get_element_type();
             const auto rank = getRankOrThrow(parameter->get_partial_shape());
             ov::Layout modelLayout = parameter->get_layout();
-            std::string inputModelLayout = std::regex_replace(modelLayout.to_string(), std::regex(R"([\[\],])"), "");
-            std::string inputLayout = inputModelLayout;
+            std::string inputLayout = modelLayout.to_string();
             if (modelLayout.empty()) {
                 inputLayout = rankToLegacyLayoutString(rank);
             }
@@ -565,7 +564,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
 
             inputsPrecisionSS << NAME_VALUE_SEPARATOR << ovPrecisionToLegacyPrecisionString(precision);
             inputsLayoutSS << NAME_VALUE_SEPARATOR << inputLayout;
-            inputsModelLayoutSS << NAME_VALUE_SEPARATOR << inputModelLayout;
+            inputsModelLayoutSS << NAME_VALUE_SEPARATOR << modelLayout.to_string();
 
             ++parameterIndex;
         }
@@ -584,8 +583,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
         const auto precision = result->get_element_type();
         const auto rank = getRankOrThrow(result->get_output_partial_shape(0));
         ov::Layout modelLayout = result->get_layout();
-        std::string outputModelLayout = std::regex_replace(modelLayout.to_string(), std::regex(R"([\[\],])"), "");
-        std::string outputLayout = outputModelLayout;
+        std::string outputLayout = modelLayout.to_string();
         if (modelLayout.empty()) {
             outputLayout = rankToLegacyLayoutString(rank);
         }
@@ -610,7 +608,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
 
         outputsPrecisionSS << NAME_VALUE_SEPARATOR << ovPrecisionToLegacyPrecisionString(precision);
         outputsLayoutSS << NAME_VALUE_SEPARATOR << outputLayout;
-        outputsModelLayoutSS << NAME_VALUE_SEPARATOR << outputModelLayout;
+        outputsModelLayoutSS << NAME_VALUE_SEPARATOR << modelLayout.to_string();
 
         ++resultIndex;
     }
