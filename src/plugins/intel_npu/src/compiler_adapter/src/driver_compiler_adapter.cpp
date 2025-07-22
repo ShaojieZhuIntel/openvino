@@ -283,8 +283,10 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compileWS(const std::shared_ptr<o
 
     std::string buildFlags;
     const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
+    const bool useModelLayout =
+        !((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 5));
 
-    const std::string serializedIOInfo = serializeIOInfo(model, useIndices);
+    const std::string serializedIOInfo = serializeIOInfo(model, useIndices, useModelLayout);
     const FilteredConfig* plgConfig = dynamic_cast<const FilteredConfig*>(&config);
     if (plgConfig == nullptr) {
         OPENVINO_THROW("config is not FilteredConfig");
