@@ -5,6 +5,7 @@
 #include "driver_compiler_adapter.hpp"
 
 #include <fstream>
+#include <iostream>
 #include <regex>
 #include <string_view>
 
@@ -223,6 +224,8 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<con
     const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
     const bool useModelLayout =
         !((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 5));
+
+    std::cout << "Compiler version: " << compilerVersion.major << "." << compilerVersion.minor << std::endl;
 
     _logger.debug("build flags");
     buildFlags += serializeIOInfo(model, useIndices, useModelLayout);
