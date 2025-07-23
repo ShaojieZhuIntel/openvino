@@ -541,7 +541,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
             const auto rank = getRankOrThrow(parameter->get_partial_shape());
             ov::Layout modelLayout = parameter->get_layout();
             std::string inputLayout = modelLayout.to_string();
-            if (modelLayout.empty()) {
+            if (modelLayout.empty() || !useModelLayout) {
                 inputLayout = rankToLegacyLayoutString(rank);
             }
 
@@ -586,7 +586,7 @@ std::string DriverCompilerAdapter::serializeIOInfo(const std::shared_ptr<const o
         const auto rank = getRankOrThrow(result->get_output_partial_shape(0));
         ov::Layout modelLayout = result->get_layout();
         std::string outputLayout = modelLayout.to_string();
-        if (modelLayout.empty()) {
+        if (modelLayout.empty() || !useModelLayout) {
             outputLayout = rankToLegacyLayoutString(rank);
         }
 
