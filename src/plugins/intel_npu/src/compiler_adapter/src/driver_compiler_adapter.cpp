@@ -223,7 +223,7 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<con
     std::string buildFlags;
     const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
     const bool useModelLayout =
-        !((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 5));
+        !((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 23));
 
     std::cout << "Compiler version: " << compilerVersion.major << "." << compilerVersion.minor << std::endl;
 
@@ -287,7 +287,7 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compileWS(const std::shared_ptr<o
     std::string buildFlags;
     const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
     const bool useModelLayout =
-        !((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 5));
+        !((compilerVersion.major < 7) || (compilerVersion.major == 7 && compilerVersion.minor < 23));
 
     const std::string serializedIOInfo = serializeIOInfo(model, useIndices, useModelLayout);
     const FilteredConfig* plgConfig = dynamic_cast<const FilteredConfig*>(&config);
