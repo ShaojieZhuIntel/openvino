@@ -144,6 +144,12 @@ std::map<std::string, std::string> parseArgMap(std::string argMap) {
     return parsedMap;
 }
 }  // namespace
+#ifdef _WIN32
+#    include <direct.h>
+#else
+#    include <stdlib.h>
+#endif
+
 using supported_type_t = std::unordered_map<std::string, ov::element::Type>;
 ov::element::Type getType(std::string value, const supported_type_t& supported_precisions) {
     std::transform(value.begin(), value.end(), value.begin(), ::toupper);
@@ -503,7 +509,23 @@ int main(int argc, char* argv[]) {
         }
 
         std::cout << "Compiling model" << std::endl;
+        std::cout << "Compiling model with CIP" << std::endl;
+        configs["NPU_COMPILER_TYPE"] = "PLUGIN";
+#ifdef _WIN32
+        _putenv("NPU_COMPILER_TYPE=PLUGIN");
+#else
+        setenv("NPU_COMPILER_TYPE", "PLUGIN", 1);
+#endif
         auto compiledModel = core.compile_model(model, FLAGS_d, {configs.begin(), configs.end()});
+        std::cout << "Compiling model with CID" << std::endl;
+        configs["NPU_COMPILER_TYPE"] = "DRIVER";
+#ifdef _WIN32
+        _putenv("NPU_COMPILER_TYPE=DRIVER");
+#else
+        setenv("NPU_COMPILER_TYPE", "DRIVER", 1);
+#endif
+        auto compiledModelCip = core.compile_model(model, FLAGS_d, {configs.begin(), configs.end()});
+        // auto compiledModel = core.compile_model(model, FLAGS_d, {configs.begin(), configs.end()});
         loadNetworkTimeElapsed =
             std::chrono::duration_cast<TimeDiff>(std::chrono::steady_clock::now() - timeBeforeLoadNetwork);
         std::string outputName = FLAGS_o;
