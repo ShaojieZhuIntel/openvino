@@ -70,16 +70,18 @@ VCLApi::VCLApi() : _logger("VCLApi", Logger::global().level()) {
     }
     vcl_weak_symbols_list();
 #undef vcl_symbol_statement
-
-#define vcl_symbol_statement(vcl_symbol) vcl_symbol = this->vcl_symbol;
-    vcl_symbols_list();
-    vcl_weak_symbols_list();
-#undef vcl_symbol_statement
 }
 
 const std::shared_ptr<VCLApi> VCLApi::getInstance() {
-    static std::shared_ptr<VCLApi> instance = std::make_shared<VCLApi>();
-    return instance;
+    static std::map<std::filesystem::path, std::shared_ptr<VCLApi>> instances;
+    static std::mutex mtx;
+    std::lock_guard<std::mutex> lock(mtx);
+
+    const auto compilerLibraryPath = getCompilerLibraryPath();
+    if (instances.find(compilerLibraryPath) == instances.end()) {
+        instances[compilerLibraryPath] = std::make_shared<VCLApi>();
+    }
+    return instances[compilerLibraryPath];
 }
 
 }  // namespace intel_npu
